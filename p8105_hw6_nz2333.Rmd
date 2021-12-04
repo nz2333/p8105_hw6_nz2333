@@ -1,0 +1,79 @@
+---
+title: "p8105_hw6_nz2333"
+author: "nz2333"
+date: "12/4/2021"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(modelr)
+library(mgcv)
+
+set.seed(1)
+
+knitr::opts_chunk$set(
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+
+## Problem 1
+
+_Clean data_
+```{r}
+problem1_df = read_csv("./birthweight.csv") %>%
+  janitor::clean_names() %>%
+  mutate(
+    babysex = as.factor(babysex),
+    frace = as.factor(frace),
+    malform = as.factor(malform),
+    mrace = as.factor(mrace),
+    
+    babysex = recode(babysex, "1" = "Male", "2" = "Female"), 
+    frace = recode(frace, "1" = "White", "2" = "Black", "3" = "Asian", "4" = "Puerto Rican", "8" = "Other", "9" = "Unknown"),
+    malform = recode(malform, "0" = "absent", "1" = "present"),
+    mrace = recode(mrace, "1" = "White", "2" = "Black", "3" = "Asian", "4" = "Puerto Rican", "8" = "Other", "9" = "Unknown")
+  )
+
+problem1_df
+```
+
+_Check for missing values_
+```{r}
+map(problem1_df, ~sum(is.na(.)))
+```
+No missing data is found for all variables. 
+
+_Model proposal_
+Since we are trying to understand the effects of several variables on a child’s birthweight, I propose to associate birthweight with gender, baby's length and head circumstances at birth, mother's weight gain during pregnancy and mother's height. 
+```{r}
+p1_fit = lm(bwt ~ babysex + bhead + blength + wtgain + mheight, data = problem1_df)
+```
+
+_Plot of residuals and predicted values_
+```{r}
+problem1_df %>% 
+  modelr::add_residuals(p1_fit) %>%
+  modelr::add_predictions(p1_fit) %>%
+  ggplot(aes(x = pred, y = resid)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(color = "red", method = "lm", se = FALSE) +
+  labs(
+    title = "Residual plot for predicted values", 
+    x = "Predicted values", 
+    y = "Residuals"
+  )
+```
+
