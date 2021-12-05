@@ -2,7 +2,7 @@
 title: "p8105_hw6_nz2333"
 author: "nz2333"
 date: "12/4/2021"
-output: html_document
+output: github_document
 ---
 
 ```{r}
