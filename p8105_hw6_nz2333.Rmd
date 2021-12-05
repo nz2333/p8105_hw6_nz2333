@@ -78,8 +78,9 @@ problem1_df %>%
   )
 ```
 
+Residuals are evenly distributed around 0, so the asusmption of constant variance of residuals hold. However, there are some extreme values on the left side, suggesting outliers. 
+
 _Comparison with two other models_
-head circumference, length, sex, and all interactions (including the three-way interaction) between these
 ```{r}
 model1 = lm(bwt ~ blength + gaweeks, data = problem1_df)
 model2 = lm(bwt ~ bhead + blength + babysex + bhead*blength + blength*babysex + bhead*babysex + bhead*blength*babysex, data = problem1_df)
