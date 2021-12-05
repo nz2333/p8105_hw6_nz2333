@@ -134,3 +134,84 @@ cv_df %>%
 
 The plot shows that my proposed model p1fit has the lowest RMSE, which means that this model is the best model fitted among the three through comparison. 
    
+## Problem 2
+```{r}
+weather_df = 
+  rnoaa::meteo_pull_monitors(
+    c("USW00094728"),
+    var = c("PRCP", "TMIN", "TMAX"), 
+    date_min = "2017-01-01",
+    date_max = "2017-12-31") %>%
+  mutate(
+    name = recode(id, USW00094728 = "CentralPark_NY"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) %>%
+  select(name, id, everything())
+```
+
+_R squared_
+```{r}
+p2_r2 = weather_df %>% 
+  modelr::bootstrap(n = 5000) %>% 
+  mutate(
+    models = map(strap, ~lm(tmax ~ tmin, data = .x) ),
+    results = map(models, broom::glance)) %>% 
+  select(-strap, -models) %>% 
+  unnest(results)
+
+p2_r2 %>%
+  summarize(
+    ci_lower = quantile(r.squared, 0.025), 
+    ci_upper = quantile(r.squared, 0.975))
+
+p2_r2 %>%
+ggplot(aes(x = r.squared)) +
+  geom_density() +
+  labs(
+    title = "Distribution plot of R squared estimates", 
+    x = "R-squared", 
+    y = "Density"
+  )
+```
+
+The 95% Confidence interval for R squared is (0.894, 0.927). 
+The distribution over the R squared estimates approximates a normal distribution with a bell shaped curve. The mean is `r round(mean(pull(p2_r2, r.squared)), 3)` and standard deviation is `r round(sd(pull(p2_r2, r.squared)), 3)`. 
+
+_Log betas_
+```{r}
+p2_log = weather_df %>% 
+  modelr::bootstrap(n = 5000) %>% 
+  mutate(
+    models = map(strap, ~lm(tmax ~ tmin, data = .x) ),
+    results = map(models, broom::tidy)) %>% 
+  select(-strap, -models) %>% 
+  unnest(results)
+
+log = p2_log %>%
+  select(.id, term, estimate) %>%
+  pivot_wider(
+    names_from = "term",
+    values_from = "estimate"
+  ) %>%
+  mutate(
+    log = log(`(Intercept)` *tmin)
+  )
+
+log %>%
+  summarize(
+    ci_lower = quantile(log, 0.025), 
+    ci_upper = quantile(log, 0.975))
+
+log %>%
+ggplot(aes(x = log)) +
+  geom_density() +
+  labs(
+    title = "Distribution plot of Log(beta0*beta1) estimates", 
+    x = "Log(beta0*beta1)", 
+    y = "Density"
+  )
+```
+
+
+The 95% Confidence interval for Log(beta0*beta1) is (1.97, 2.06). 
+The distribution over the Log(beta0*beta1) estimates approximates a normal distribution with a bell shaped curve. The mean is `r round(mean(pull(log, log)), 3)` and standard deviation is `r round(sd(pull(log, log)), 3)` 
