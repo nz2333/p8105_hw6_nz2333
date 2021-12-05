@@ -57,6 +57,7 @@ map(problem1_df, ~sum(is.na(.)))
 No missing data is found for all variables. 
 
 _Model proposal_
+
 Since we are trying to understand the effects of several variables on a child’s birthweight, I propose to associate birthweight with gender, baby's length and head circumstances at birth, mother's weight gain during pregnancy and mother's height. 
 ```{r}
 p1_fit = lm(bwt ~ babysex + bhead + blength + wtgain + mheight, data = problem1_df)
@@ -77,3 +78,58 @@ problem1_df %>%
   )
 ```
 
+_Comparison with two other models_
+head circumference, length, sex, and all interactions (including the three-way interaction) between these
+```{r}
+model1 = lm(bwt ~ blength + gaweeks, data = problem1_df)
+model2 = lm(bwt ~ bhead + blength + babysex + bhead*blength + blength*babysex + bhead*babysex + bhead*blength*babysex, data = problem1_df)
+
+broom::tidy(model1)
+broom::tidy(model2)
+```
+
+_Cross validation_
+```{r}
+cv_df = crossv_mc(problem1_df, 100)
+
+cv_df =
+  cv_df %>% 
+  mutate(
+    train = map(train, as_tibble),
+    test = map(test, as_tibble)
+  )
+
+cv_df = cv_df %>%
+  mutate(
+    p1_fit = map(train, ~lm(bwt ~ babysex + bhead + blength + wtgain + mheight, data = .x)), 
+    model1 = map(train, ~lm(bwt ~ blength + gaweeks, data = .x)), 
+    model2 = map(train, ~lm(bwt ~ bhead + blength + babysex + bhead*blength + blength*babysex + bhead*babysex + bhead*blength*babysex, data = .x))
+  ) %>%
+  mutate(
+    rmse_p1fit = map2_dbl(p1_fit, test, ~rmse(model = .x, data = .y)),
+    rmse_model1 = map2_dbl(model1, test, ~rmse(model = .x, data = .y)),
+    rmse_model2 = map2_dbl(model2, test, ~rmse(model = .x, data = .y)))
+```
+
+_Plot of RMSEs_
+```{r}
+cv_df %>% 
+  select(starts_with("rmse")) %>% 
+  pivot_longer(
+    everything(),
+    names_to = "model", 
+    values_to = "rmse",
+    names_prefix = "rmse_") %>% 
+  mutate(model = fct_inorder(model)) %>% 
+  ggplot(aes(x = model, y = rmse, fill = model)) + 
+  geom_violin(alpha = 0.3) +
+  geom_boxplot(alpha = 0.4) +
+  labs(
+    title = "Violin plot and box plot for RMSE across three models", 
+    x = "model", 
+    y = "RMSE"
+  )
+```
+
+The plot shows that my proposed model p1fit has the lowest RMSE, which means that this model is the best model fitted among the three through comparison. 
+   
